@@ -49,9 +49,10 @@
 1. Klikk på **"Start opptak"** for å begynne innspilling.
 2. Klikk **"Stopp og transkribér"** når opptaket er ferdig.
 3. Klikk **"Generér notat"** for å opprette et strukturert P-SOAP-notat.
-4. Skriv inn relevante ICPC-2-koder manuelt
-5. La AI foreslå koder.
-6. Klikk **"Ferdig"** for å lagre valgte koder i lokal database.
+4. Input relevante ICPC-2-koder manuelt (et bokstav og to siffer, f.eks. N01). Bruk mellomrom mellom kodene. 
+5. La AI foreslå ICPC-2 koder.
+6. Velg/avvelg ICPC-2 koder (eget input og KI-forslag).
+6. Klikk **"Ferdig"** for å lagre valgte koder i lokal database (icpc_codes.db opprettes automatisk).
 
 ## 📁 Filstruktur
 
