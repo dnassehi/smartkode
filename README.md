@@ -91,7 +91,7 @@ npm run package-win
 
 ## 📄 Lisens
 
-Creative commons.
+MIT lisens.
 
 ---
 
