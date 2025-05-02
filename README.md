@@ -98,8 +98,3 @@ Creative commons.
 > Utviklet med fokus på sikkerhet, fart og brukervennlighet for travle klinikere.
 
 ```
-
----
-
-Ønsker du også en engelsk versjon av README-filen?
-```
