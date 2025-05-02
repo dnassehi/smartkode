@@ -23,7 +23,7 @@
 1. **Klon repoet**:
 
    ```bash
-   git clone https://github.com/ditt-brukernavn/smartkode.git
+   git clone https://github.com/dnassehi/smartkode.git
    cd smartkode
 
 2. **Installer avhengigheter**:
@@ -36,7 +36,7 @@
 
    * `API.txt` – inneholder din personlige OpenAI API-nøkkel (kun én linje).
    * `Fil 1 2025 - ICPC-2 koderegister med utvidet termsett (flere linjer per kode).xlsx` – ICPC-2 koderegister.
-   * *(Valgfritt)* `ID.txt` – inneholder lege-ID for å logge kodevalg.
+   * `ID.txt` – inneholder lege-ID for å logge kodevalg.
 
 4. **Kjør appen**:
 
@@ -49,16 +49,17 @@
 1. Klikk på **"Start opptak"** for å begynne innspilling.
 2. Klikk **"Stopp og transkribér"** når opptaket er ferdig.
 3. Klikk **"Generér notat"** for å opprette et strukturert P-SOAP-notat.
-4. Skriv inn relevante ICPC-2-koder manuelt, eller la AI foreslå koder.
-5. Klikk **"Ferdig"** for å lagre valgte koder i lokal database.
+4. Skriv inn relevante ICPC-2-koder manuelt
+5. La AI foreslå koder.
+6. Klikk **"Ferdig"** for å lagre valgte koder i lokal database.
 
 ## 📁 Filstruktur
 
 * `electron-main.js`: Starter appen og laster direkte `transcribe.html`.
 * `transcribe.html`: Brukergrensesnittet (kun transkripsjonssiden).
-* `main-transcribe.js`: All logikk for opptak, transkripsjon, notatgenerering og koding. [i egen \js mappe]
-* `languageLoaderUsage.js`: Støtte for norsk/engelsk språk og hjelpetekst. [i egen \js mappe]
-* `ui.js`: Håndtering av guide-overlay. [i egen \js mappe]
+* `main-transcribe.js`: All logikk for opptak, transkripsjon, notatgenerering og koding.
+* `languageLoaderUsage.js`: Støtte for norsk/engelsk språk og hjelpetekst.
+* `ui.js`: Håndtering av guide-overlay.
 * `API.txt`: Inneholder OpenAI API-nøkkel (leses lokalt).
 * `package.json`: Avhengigheter og pakkerutiner for Windows.
 
@@ -95,4 +96,4 @@ MIT lisens.
 
 ---
 
-> Utviklet med fokus på sikkerhet, fart og brukervennlighet for travle klinikere.
+> Utviklet med tanke på forskning.
