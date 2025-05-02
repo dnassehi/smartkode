@@ -96,5 +96,3 @@ Creative commons.
 ---
 
 > Utviklet med fokus på sikkerhet, fart og brukervennlighet for travle klinikere.
-
-```
