@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <title>Smartkode – Transkripsjon</title>
+  <!-- Ingen ekstern font; benytter systemfonter -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: sans-serif; background-color: #f8f8f8; color: #333; margin: 0; padding: 20px; }
+    h3 { font-size: 24px; margin-top: 30px; }
+    /* Topp-linje: kun guide-lenke nå (ingen tilbake-lenke eller synlig språkvelger) */
+    #top-bar {
+      display: flex;
+      justify-content: flex-end;  /* Plasserer guide-lenken til høyre */
+      align-items: center;
+    }
+    #back-link { display: none; }  /* Skjuler tilbake-lenken helt */
+    #guide-link { font-weight: bold; cursor: pointer; }
+    /* Skjul språkvelger */
+    #lang-container { display: none; }
+    /* Stil for timer og tekstområder */
+    .status-line { font-size: 16px; margin: 5px 0; }
+    #transcriptOutput, #noteOutput {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+      min-height: 100px;
+      background: #fff;
+      white-space: pre-wrap;
+      text-align: left;
+      width: 100%;
+    }
+    #noteOutput {
+      overflow-y: hidden;
+      resize: none;
+    }
+    /* Knapper */
+    .btn {
+      background-color: #5a9; color: #fff;
+      border: none; border-radius: 5px;
+      padding: 10px 16px; font-size: 16px;
+      cursor: pointer; margin: 5px;
+    }
+    .btn:hover { background-color: #489; }
+    .btn:disabled { background-color: #ccc; cursor: default; }
+    /* Guide-overlay stil */
+    #guideOverlay {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      color: #000; font-size: 18px; text-align: left; padding: 20px;
+    }
+    #guideOverlay .content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 600px;
+      margin: 50px auto;
+      position: relative;
+    }
+    #guideOverlay .close-btn {
+      position: absolute; top: 10px; right: 10px;
+      background: #333; color: #fff;
+      border: none; padding: 5px 10px;
+      cursor: pointer; font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Toppseksjon: kun Guide-lenke (språkvelger og tilbake-lenke er fjernet) -->
+  <div id="top-bar">
+    <!-- Tilbake-lenke fjernet -->
+    <span id="guide-link">Les først ➔ Guide</span>
+    <div id="lang-container" style="display:none;">
+      <select id="lang-select">
+        <option value="en">English</option>
+        <option value="no" selected>Norsk</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Opptaksseksjon -->
+  <h3 id="recordingAreaTitle">Opptaksområde</h3>
+  <div class="status-line" id="recordingTimer">Opptakstid: 0 sek</div>
+  <div class="status-line" id="completionTimer">Transkripsjonstid: 0 sek</div>
+  <button class="btn" id="startBtn">Start opptak</button>
+  <button class="btn" id="pauseResumeBtn" disabled>Sett på pause</button>
+  <button class="btn" id="stopBtn" disabled>Stopp og transkribér</button>
+  <p id="transcriptOutput">Velkommen! Klikk "Start opptak" for å begynne.</p>
+
+  <!-- Notatgenereringsseksjon -->
+  <h3 id="noteGenerationTitle">Notatgenerering</h3>
+  <button class="btn" id="generateNoteBtn" disabled>Generér notat</button>
+  <div class="status-line" id="noteTimer">Notatgenereringstid: 0 sek</div>
+  <textarea id="noteOutput"></textarea>
+
+  <!-- ICPC-2 kodingsseksjon (vises etter at notat er generert) -->
+  <div id="icpc-section" style="display: none; margin-top: 30px;">
+    <h3 id="icpcSectionTitle">ICPC-2 Koding</h3>
+    <p>Skriv inn aktuelle koder (f.eks. <code>K86</code>) adskilt med mellomrom:</p>
+    <input type="text" id="icpcInput" placeholder="For eksempel: K86 A04 B99" style="width: 400px;" />
+    <button class="btn" id="icpcNextBtn">Neste</button>
+    <div id="icpcSuggestions" style="display: none; margin-top: 20px;">
+      <p><strong>Forslag til koder:</strong></p>
+      <div id="icpcSuggestionsList"><!-- AI-forslåtte (og inntastede) koder --></div>
+      <button class="btn" id="icpcDoneBtn" style="margin-top: 10px;">Ferdig</button>
+    </div>
+  </div>
+
+  <!-- Guide/instruksjons-innhold overlay -->
+  <div id="guideOverlay">
+    <div class="content">
+      <button class="close-btn" id="closeGuideBtn">× Lukk</button>
+      <div id="guideOverlayContent"><!-- Guide-tekst injiseres her --></div>
+    </div>
+  </div>
+
+  <!-- Hovedskript for transkripsjonssiden -->
+  <script type="module" src="js/main-transcribe.js"></script>
+</body>
+</html>
