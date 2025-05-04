@@ -16,19 +16,25 @@ let isPaused = false;
 let selectedPromptIndex = 0;
 
 // Prompt-mal for notat (P-SOAP)
-const promptTemplates = `Du skal lese transkripsjonen av en pasientkonsultasjon og skrive et medisinsk journalnotat i P-SOAP-format (Presentasjon, Subjektivt, Objektivt, Analyse, Plan) basert på transkripsjonen nedenfor.
-
-Retningslinjer:
-- Bruk kun opplysninger som er eksplisitt nevnt i transkripsjonen.
-- Ikke legg til nye symptomer, diagnoser eller behandlingsforslag som ikke er nevnt.
-- Du kan forbedre grammatikk og språk for klarhet, men skal ikke endre meningsinnhold eller legge til informasjon.
-- Bruk klart, medisinsk presist og formelt språk, og unngå direkte tale, fyllord eller uformelle uttrykk.
-- Sørg for at notatet er faglig presist og konsist.
-- Strukturer notatet etter P-SOAP-modellen med overskriftene: Presentasjon, Subjektivt, Objektivt, Analyse, Plan.
+function buildPsoapPrompt(transcriptText) {
+  return `Du er en medisinsk dokumentasjonsmodell med følgende oppgave:
+1. Generer et journalnotat strukturert etter P-SOAP (Presentasjon, Subjektivt, Objektivt, Analyse, Plan).
+2. Inkluder kun informasjon som er eksakt nevnt i transkripsjonen.
+3. Ikke tilføye, anta eller gjette noe som ikke står i transkripsjonen.
+4. Forbedre grammatikk, stavemåte og flyt uten å endre innhold.
+5. Hvis et P-SOAP-felt ikke er nevnt, sett det til en tom streng.
+6. Returner **kun** et gyldig JSON-objekt med disse feltene (uten ekstra tekst):
+{
+  "Presentasjon": "<tekst>",
+  "Subjektivt": "<tekst>",
+  "Objektivt": "<tekst>",
+  "Analyse": "<tekst>",
+  "Plan": "<tekst>"
+}
 
 Transkripsjon:
-`
-;
+"${transcriptText}"`;
+}
 
 // Les OpenAI API-nøkkel fra fil (API.txt)
 let apiKey = "";
@@ -152,7 +158,7 @@ function setupEventListeners() {
       return;
     }
     // Bygg brukerprompt basert på valgt mal (P-SOAP) og transkribert tekst
-    const prompt = `${promptTemplates[selectedPromptIndex]}${transcriptText}`;
+    const prompt = buildPsoapPrompt(transcriptText);
     noteOutput.value = "...";
     adjustNoteHeight();
     generateNoteBtn.disabled = true;
@@ -184,16 +190,33 @@ function setupEventListeners() {
       if (data.error) {
         noteOutput.value = `Feil: ${data.error.message || 'Kunne ikke generere notat.'}`;
         adjustNoteHeight();
-      } else {
-        const noteText = data.choices?.[0]?.message?.content || "";
-        noteOutput.value = noteText.trim();
-        adjustNoteHeight();
-        // Vis ICPC-2 kodingsseksjonen når notatet er klart
-        if (icpcSection) {
-          icpcSection.style.display = 'block';
-        }
+        return;
       }
-    })
+    
+      let parsed;
+      try {
+        parsed = JSON.parse(data.choices[0].message.content);
+      } catch (err) {
+        console.error("JSON parse error:", err);
+        noteOutput.value = "Feil: Kunne ikke tolke svar fra AI som JSON.";
+        adjustNoteHeight();
+        return;
+      }
+    
+      // Bygg kort P/S/O/A/P-tekst
+      const lines = [
+        `P: ${parsed.Presentasjon || ""}`,
+        `S: ${parsed.Subjektivt || ""}`,
+        `O: ${parsed.Objektivt || ""}`,
+        `A: ${parsed.Analyse || ""}`,
+        `P: ${parsed.Plan || ""}`
+      ];
+    
+      noteOutput.value = lines.join("\n\n");
+      adjustNoteHeight();
+    
+      if (icpcSection) icpcSection.style.display = 'block';
+    })  
     .catch(err => {
       clearInterval(noteInterval);
       generateNoteBtn.disabled = false;
