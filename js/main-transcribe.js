@@ -16,37 +16,18 @@ let isPaused = false;
 let selectedPromptIndex = 0;
 
 // Prompt-mal for notat (P-SOAP)
-const promptTemplates = [
-  `Du er en medisinsk sekretær med spesialisering i journalføring for pasientjournaler. Din oppgave er å omskrive følgende transkriberte samtale mellom lege og pasient til et strukturert, profesjonelt journalnotat etter P-SOAP-modellen.
+const promptTemplates = `Du skal lese transkripsjonen av en pasientkonsultasjon og skrive et medisinsk journalnotat i P-SOAP-format (Presentasjon, Subjektivt, Objektivt, Analyse, Plan) basert på transkripsjonen nedenfor.
 
-P-SOAP står for:
-- **P (Presentasjon):** Kort oppsummering av henvendelsesårsak og relevant medisinsk bakgrunn.
-- **S (Subjektivt):** Pasientens beskrivelser av symptomer, sykdomsforløp, funksjon og opplevelser.
-- **O (Objektivt):** Kliniske funn fra undersøkelse, laboratorieprøver, bildediagnostikk, målte parametre.
-- **A (Analyse/Vurdering):** Legens vurdering av situasjonen, differensialdiagnoser, tentativ eller bekreftet diagnose.
-- **P (Plan):** Videre tiltak, behandlingsopplegg, undersøkelser eller oppfølging.
+Retningslinjer:
+- Bruk kun opplysninger som er eksplisitt nevnt i transkripsjonen.
+- Ikke legg til nye symptomer, diagnoser eller behandlingsforslag som ikke er nevnt.
+- Du kan forbedre grammatikk og språk for klarhet, men skal ikke endre meningsinnhold eller legge til informasjon.
+- Bruk klart, medisinsk presist og formelt språk, og unngå direkte tale, fyllord eller uformelle uttrykk.
+- Sørg for at notatet er faglig presist og konsist.
+- Strukturer notatet etter P-SOAP-modellen med overskriftene: Presentasjon, Subjektivt, Objektivt, Analyse, Plan.
 
-**Viktige krav til skrivestil:**
-- Bruk klart, medisinsk presist og konsist språk som er egnet for dokumentasjon i pasientjournal.
-- Unngå direkte tale, fyllord og uformelle uttrykk.
-- Bruk faglig korrekt terminologi.
-- Strukturer alltid notatet strengt i P-SOAP-rekkefølge.
-- Medikamentnavn, sykdomsnavn og medisinske uttrykk skal sjekkes for korrekt skrivemåte og oppdatert informasjon i følgende kilder:
-  - https://sml.snl.no
-  - https://www.felleskatalogen.no/medisin
-  - https://bestpractice.bmj.com/
-  - https://fhi.no
-  - https://legehandboka.no
-  - https://helsedirektoratet.no/retningslinjer
-  - https://www.brukerhandboken.no/
-- Dersom du er usikker på et faguttrykk eller en behandlingsanbefaling, skal du konsultere en av ovennevnte kilder før du fullfører journalnotatet.
-
-**Spesialinstruksjoner:**
-- Identifiser og korriger eventuelle feiltolkninger eller feilaktig medisinsk bruk av ord i transkripsjonen.
-- Dersom samtalen inneholder flere samtidige problemstillinger, lag en egen P-SOAP-struktur for hver problemstilling.
-
-Samtale:
-  `
+Transkripsjon:
+`
 ];
 
 // Les OpenAI API-nøkkel fra fil (API.txt)
