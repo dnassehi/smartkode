@@ -16,7 +16,6 @@
 - [OpenAI Whisper API](https://platform.openai.com/docs/guides/speech-to-text)
 - [OpenAI GPT API](https://platform.openai.com/docs/guides/gpt)
 - [SQLite3](https://www.sqlite.org/)
-- [xlsx](https://www.npmjs.com/package/xlsx)
 
 ## 📦 Installasjon
 
@@ -32,10 +31,9 @@
    npm install
    ```
 
-3. **Legg til nødvendige filer**:
+3. **Nødvendige filer**:
 
    * `API.txt` – inneholder din personlige OpenAI API-nøkkel (kun én linje).
-   * `Fil 1 2025 - ICPC-2 koderegister med utvidet termsett (flere linjer per kode).xlsx` – ICPC-2 koderegister.
    * `ID.txt` – inneholder lege-ID for å logge kodevalg.
 
 4. **Kjør appen**:
