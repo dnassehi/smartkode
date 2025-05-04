@@ -28,7 +28,7 @@ Retningslinjer:
 
 Transkripsjon:
 `
-];
+;
 
 // Les OpenAI API-nøkkel fra fil (API.txt)
 let apiKey = "";
