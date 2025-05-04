@@ -222,110 +222,156 @@ function setupEventListeners() {
     });
   });
 
-  // Event: Neste (hent forslag til ICPC-2 koder)
-  icpcNextBtn.addEventListener('click', () => {
-    const noteText = noteOutput.value || "";
-    if (!noteText.trim()) {
-      alert("Notatet er tomt eller ikke generert ennå.");
-      return;
-    }
-    // Hent koder som legen selv har skrevet inn
-    const doctorInputCodes = icpcInput.value.trim().toUpperCase().split(/\s+/).filter(code => /^[A-Z]\d{2}$/.test(code));
-    // Forbered OpenAI-prompt for nøkkelorduttrekk fra notatet
-    const keywordPrompt = `Du er en medisinsk ekspert som skal analysere et pasientjournalnotat skrevet i P-SOAP-format (Presentasjon, Subjektivt, Objektivt, Analyse, Plan).
+// Event: Neste (hent forslag til ICPC-2 koder)
+icpcNextBtn.addEventListener('click', () => {
+  const noteText = noteOutput.value || "";
+  if (!noteText.trim()) {
+    alert("Notatet er tomt eller ikke generert ennå.");
+    return;
+  }
+  // Hent koder som legen selv har skrevet inn
+  const doctorInputCodes = icpcInput.value.trim().toUpperCase()
+    .split(/\s+/)
+    .filter(code => /^[A-Z]\d{2}$/.test(code));
+
+  // Forbedret OpenAI-prompt for kodeforslag basert på notatet (ICPC-2)
+  const suggestPrompt = `Du er en medisinsk kodeekspert med oppgave å analysere pasientjournaler skrevet i P-SOAP-format (Presentasjon, Subjektivt, Objektivt, Analyse, Plan) og identifisere relevante ICPC-2 diagnosikoder.
 
 Oppgaven din:
-- Identifiser de viktigste medisinske nøkkelordene i notatet (for eksempel symptomer, kliniske funn, tentativ diagnose).
-- Foreta en vurdering basert på klinisk skjønn om hva som er hovedårsak(ene) til kontakten og ranger de etter hver andre.
-- Begrens listen til de 1-10 viktigste nøkkelord.
-- Svar kun med en kommaseparert liste over disse nøkkelordene, og ingen annen tekst.
+- Basert på journalnotatet, foreslå den mest relevante ICPC-2-koden(e) som beskriver pasientens hovedproblem og eventuelle viktige tillegg.
+- Bruk Helsedirektoratets offisielle ICPC-2 koderegister (finnkode.helsedirektoratet.no/icpc2/chapter) som referanse.
+- NB! Ikke finn på egne koder eller beskrivelser – velg kun koder som finnes i det offisielle ICPC-2-registeret.
+- Inkluder hver kode sammen med dens offisielle norske beskrivelse fra koderegisteret.
 
-Notat:
+Fremgangsmåte:
+- Identifiser nøkkelord i PSOAP-notatet (diagnoser, symptomer, funn, tiltak).
+- Slå opp disse nøkkelordene i ICPC-2-registeret for å finne mulige koder.
+- Velg koder basert på best samsvar mellom innholdet i notatet og kodens beskrivelse.
+- Prioriter eksakte treff fremfor vage assosiasjoner.
+- Hvis flere koder er relevante, oppgi hovedproblemet først og deretter tilleggskoder etter synkende relevans.
+
+Output:
+Returner svaret som et **gyldig JSON-objekt** uten noen forklarende tekst, i følgende format:
+{
+  "diagnoses": [
+    {
+      "code": "L02",
+      "description": "Ryggsmerte",
+      "chapter": "Muskel og skjelettsystemet",
+      "confidence": 0.95
+    },
+    ...
+  ]
+}
+
+Journalnotat:
 "${noteText}"`;
-    // Vis indikasjon på at forslag hentes
-    icpcSuggestionsList.innerHTML = "<em>Henter forslag...</em>";
-    icpcSuggestionsDiv.style.display = 'block';
 
-    // Kall OpenAI API for nøkkelord (Chat Completion)
-    fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "user", content: keywordPrompt }
-        ]
-      })
+  // Vis indikator på at forslag hentes
+  icpcSuggestionsList.innerHTML = "<em>Henter forslag...</em>";
+  icpcSuggestionsDiv.style.display = 'block';
+
+  // Kall OpenAI API for kodeforslag (Chat Completion)
+  fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "user", content: suggestPrompt }
+      ]
     })
-    .then(response => response.json())
-    .then(data => {
-      // Fjern tidligere forslag fra listen
-      icpcSuggestionsList.innerHTML = "";
-      if (data.error) {
-        icpcSuggestionsList.textContent = `Feil ved henting av forslag: ${data.error.message || ''}`;
-        return;
+  })
+  .then(response => response.json())
+  .then(data => {
+    // Fjern tidligere forslag fra listen
+    icpcSuggestionsList.innerHTML = "";
+    if (data.error) {
+      icpcSuggestionsList.textContent = `Feil ved henting av forslag: ${data.error.message || ''}`;
+      return;
+    }
+    const content = data.choices?.[0]?.message?.content || "";
+    let aiDiagnoses = [];
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && Array.isArray(parsed.diagnoses)) {
+        aiDiagnoses = parsed.diagnoses;
+      } else {
+        throw new Error("JSON mangler 'diagnoses'-liste");
       }
-      const suggestionText = data.choices?.[0]?.message?.content || "";
-      // Ekstraher nøkkelord fra GPT-svaret (kommaseparert liste til array)
-      const rawKeywords = suggestionText.replace(/(\r\n|\r)/g, '\n').split(/[,\n]+/);
-      const keywords = rawKeywords.map(k => k.replace(/^[\s\-\d\.]+/, '').trim()).filter(k => k);
-      // Last inn ICPC-2 koderegister (Excel) hvis det ikke allerede er lastet
-      if (!window.codeDescriptions) {
-        try {
-          const xlsx = window.require ? window.require('xlsx') : undefined;
-          if (!xlsx) throw new Error("xlsx library not found");
-          const workbook = xlsx.readFile('Fil 1 2025 - ICPC-2 koderegister med utvidet termsett (flere linjer per kode).xlsx');
-          const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rows = xlsx.utils.sheet_to_json(sheet, { defval: "" });
-          window.codeDescriptions = {};
-          rows.forEach(row => {
-            const kode = row["Kode"] || row["Kode "];      // håndter eventuell UTF-8 mellomrom i nøkkel
-            const tekst = row["Kodetekst "] || row["Kodetekst"] || row["Term"] || row["Termtekst"] || row["Beskrivelse"];
-            if (kode && tekst && !window.codeDescriptions[kode] && kode !== "Kode") {
-              window.codeDescriptions[kode] = tekst.trim();
-            }
-          });
-        } catch (err) {
-          console.error("Kunne ikke lese koderegisteret:", err);
-          alert("Kunne ikke lese ICPC-2 koderegister (Excel). Forslag vises uten beskrivelser.");
-          window.codeDescriptions = {};
-        }
+    } catch (err) {
+      console.error("JSON parse error:", err);
+      icpcSuggestionsList.textContent = "Feil: Kunne ikke tolke svar fra AI (ugyldig format).";
+      icpcSuggestionsDiv.style.display = 'block';
+      return;
+    }
+
+    // Ekstraher AI-koder (kodeverdier) og gjør om til store bokstaver
+    const aiCodes = aiDiagnoses
+      .map(diag => (diag.code || "").toUpperCase())
+      .filter(code => code.match(/^[A-Z]\d{2}$/));
+    // Lagre koder for senere bruk (f.eks. ved lagring)
+    window.latestAiCodes = aiCodes;
+    window.latestDoctorInputCodes = doctorInputCodes;
+    // Kombiner legens egne koder med AI-forslag, fjern duplikater
+    const allCodesSet = new Set([...doctorInputCodes, ...aiCodes]);
+
+    // Last inn koderegister (Excel) hvis ikke alt allerede er gjort
+    if (!window.codeDescriptions) {
+      try {
+        const xlsx = window.require ? window.require('xlsx') : undefined;
+        if (!xlsx) throw new Error("xlsx library not found");
+        const workbook = xlsx.readFile('Fil 1 2025 - ICPC-2 koderegister med utvidet termsett (flere linjer per kode).xlsx');
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+        window.codeDescriptions = {};
+        rows.forEach(row => {
+          const kode = row["Kode"] || row["Kode "];      // håndter eventuelt utfyllingstegn
+          const tekst = row["Kodetekst "] || row["Kodetekst"] || row["Term"] || row["Termtekst"] || row["Beskrivelse"];
+          if (kode && tekst && !window.codeDescriptions[kode] && kode !== "Kode") {
+            window.codeDescriptions[kode] = tekst.trim();
+          }
+        });
+      } catch (err) {
+        console.error("Kunne ikke lese koderegisteret:", err);
+        alert("Kunne ikke lese ICPC-2 koderegister (Excel). Forslag vises uten beskrivelser.");
+        window.codeDescriptions = {};  // fallback til tomt objekt
       }
-      const matchedCodes = findCodesInRegistry(keywords);
-      // Lagre koder for senere bruk
-      window.latestAiCodes = matchedCodes;
-      window.latestDoctorInputCodes = doctorInputCodes;
-      // Kombiner legens egne koder med treff fra registeret, fjern duplikater
-      const allCodesSet = new Set([...doctorInputCodes, ...matchedCodes]);
-      // Bygg liste med avkryssingsbokser for hver unik kode
-      allCodesSet.forEach(code => {
-        if (!code) return;
-        const desc = window.codeDescriptions[code] || "(Ingen beskrivelse)";
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = code;
-        if (doctorInputCodes.includes(code)) {
-          // Forhåndsvelg koder som legen skrev inn selv
-          checkbox.checked = true;
-        }
-        const label = document.createElement('label');
-        label.style.display = 'block';
-        label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(` ${code} – ${desc}`));
-        icpcSuggestionsList.appendChild(label);
-      });
-      // Sørg for at forslag-seksjonen (med "Ferdig"-knapp) vises
-      icpcSuggestionsDiv.style.display = 'block';
-    })
-    .catch(err => {
-      console.error("Feil ved henting av kodeforslag:", err);
-      icpcSuggestionsList.textContent = "En feil oppstod under henting av kodeforslag.";
-      icpcSuggestionsDiv.style.display = 'block';
+    }
+
+    // Bygg liste med avkryssingsbokser for hver unik kode
+    allCodesSet.forEach(code => {
+      if (!code) return;
+      // Finn beskrivelse: bruk AI-forslagets beskrivelse hvis tilgjengelig, ellers fra koderegisteret
+      const aiEntry = aiDiagnoses.find(diag => diag.code && diag.code.toUpperCase() === code);
+      const description = aiEntry ? aiEntry.description : window.codeDescriptions[code];
+      const descText = description || "(Ingen beskrivelse)";
+      // Opprett checkbox og label
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = code;
+      if (doctorInputCodes.includes(code)) {
+        // Forhåndsvelg koder som legen skrev inn selv
+        checkbox.checked = true;
+      }
+      const label = document.createElement('label');
+      label.style.display = 'block';
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(` ${code} – ${descText}`));
+      icpcSuggestionsList.appendChild(label);
     });
+    // Sørg for at forslag-seksjonen (med "Ferdig"-knapp) vises
+    icpcSuggestionsDiv.style.display = 'block';
+  })
+  .catch(err => {
+    console.error("Feil ved henting av kodeforslag:", err);
+    icpcSuggestionsList.textContent = "En feil oppstod under henting av kodeforslag.";
+    icpcSuggestionsDiv.style.display = 'block';
   });
+});
 
   // Event: Ferdig (lagre ICPC-2 koder i lokal database)
   icpcDoneBtn.addEventListener('click', () => {
