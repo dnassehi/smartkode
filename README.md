@@ -33,7 +33,7 @@
 
 3. **Nødvendige filer**:
 
-   * `API.txt` – inneholder din personlige OpenAI API-nøkkel (kun én linje).
+   * `API.txt` – lim inn din personlige OpenAI API-nøkkel (kun én linje).
    * `ID.txt` – inneholder lege-ID for å logge kodevalg.
 
 4. **Kjør appen**:
