@@ -169,9 +169,10 @@ function setupEventListeners() {
       const keywords = await fetchKeywordsFromGpt(noteText);
       // 2. Søk og velg koder
       let suggestions = [];
+      //const matcherOptions = { preferredChapters: ['L'] }; //henger sammen med kode nedenfor
       for (const kw of keywords) {
         const codes = await searchCodes(kw);
-        const matched = matchKeywordToCodes(kw, codes, matcherOptions);
+        const matched = matchKeywordToCodes(kw, codes); // sett ev. inn matcherOptions etter codes
         if (matched.length) {
           // du kan ta flere, f.eks. top 2: matched.slice(0,2)
           suggestions.push(matched[0])
