@@ -10,7 +10,7 @@ const fs = window.require ? window.require('fs') : undefined;
 const sqlite3 = window.require ? window.require('sqlite3') : undefined;
 
 // Felles headers
-const BASE = 'https://fat.kote.helsedirektoratet.no/api/diagnosis';
+const BASE = 'https://fat.kote.helsedirektoratet.no/api/diagnosis?search';
 const HEADERS = {
   'Accept': 'application/json',
   'Accept-Language': 'nb'
