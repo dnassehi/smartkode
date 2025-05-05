@@ -3,6 +3,7 @@ console.log('🔧 main-transcribe.js starter');
 
 import { initTranscribeLanguage } from './languageLoaderUsage.js';
 import { initGuideOverlay } from './ui.js';
+import { matchKeywordToCodes } from './icpcMatcher';
 
 // Node.js-moduler for filsystem og database (gjennom Electron)
 const fs = window.require ? window.require('fs') : undefined;
@@ -170,8 +171,11 @@ function setupEventListeners() {
       let suggestions = [];
       for (const kw of keywords) {
         const codes = await searchCodes(kw);
-        const exact = codes.filter(c => c.term === kw.toLowerCase());
-        suggestions.push(...(exact.length ? exact : codes.slice(0, 1)));
+        const matched = matchKeywordToCodes(kw, codes, matcherOptions);
+        if (matched.length) {
+          // du kan ta flere, f.eks. top 2: matched.slice(0,2)
+          suggestions.push(matched[0])
+        }
       }
       // 3. Unike koder
       const uniqueCodes = [...new Set([...doctorInputCodes, ...suggestions.map(s => s.code)])];
