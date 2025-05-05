@@ -1,5 +1,5 @@
-export function initInfoModals() {}
-export function initGuideOverlay() {
+function initInfoModals() {}
+function initGuideOverlay() {
   const guideLink = document.getElementById('guide-link');
   const guideOverlay = document.getElementById('guideOverlay');
   const closeBtn = document.getElementById('closeGuideBtn');
@@ -8,3 +8,10 @@ export function initGuideOverlay() {
     closeBtn.addEventListener('click', () => guideOverlay.style.display = 'none');
   }
 }
+
+// Eksporter alle
+module.exports = {
+  initInfoModals,
+  initGuideOverlay,
+  // … andre funksjoner …
+};

@@ -108,7 +108,7 @@ const translations = {
   }
   
   // Initialiser språk for forsiden (index.html)
-  export function initIndexLanguage() {
+  function initIndexLanguage() {
     const select = document.getElementById('lang-select');
     if (!select) return;
     // Tving norsk som start-språk
@@ -125,7 +125,7 @@ const translations = {
   }
   
   // Initialiser språk for transkripsjonssiden (transcribe.html)
-  export function initTranscribeLanguage() {
+  function initTranscribeLanguage() {
     const select = document.getElementById('lang-select');
     if (!select) return;
     const savedLang = localStorage.getItem('selectedLanguage');
@@ -185,4 +185,11 @@ const translations = {
       guideContentDiv.innerHTML = lang.guideOverlayContent;
     }
   }
+
+// Eksporter alle
+module.exports = {
+  initIndexLanguage,
+  initTranscribeLanguage,
+  // … andre funksjoner …
+}; 
   

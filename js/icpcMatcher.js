@@ -14,7 +14,7 @@ const STOP_KEYWORDS = new Set([
   'aktivitet','diagnose','plan','analyse'
 ]);
 
-export function matchKeywordToCodes(kw, codes, options = {}) {
+function matchKeywordToCodes(kw, codes, options = {}) {
   const term = kw.toLowerCase().trim();
   if (STOP_KEYWORDS.has(term)) return [];
 
@@ -51,3 +51,9 @@ export function matchKeywordToCodes(kw, codes, options = {}) {
   scored.sort((a, b) => b.score - a.score);
   return scored.map(s => s.codeObj);
 }
+
+// Eksporter alle
+module.exports = {
+  matchKeywordToCodes,
+  // … andre funksjoner …
+};
