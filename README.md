@@ -16,6 +16,8 @@
 - [OpenAI Whisper API](https://platform.openai.com/docs/guides/speech-to-text)
 - [OpenAI GPT API](https://platform.openai.com/docs/guides/gpt)
 - [SQLite3](https://www.sqlite.org/)
+- [String-similarity](https://npm.io/package/string-similarity)
+- [Helsedirektoatets Front API for Terminologi API](https://fat.kote.helsedirektoratet.no/index.html)
 
 ## 📦 Installasjon
 
