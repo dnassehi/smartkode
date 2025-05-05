@@ -451,7 +451,7 @@ async function fetchDescription(code) {
   // Finn eksakt match på code (case-insensitivt)
   const exact = matches.find(m => m.code.toUpperCase() === code.toUpperCase());
   return exact
-    ? exact.description
+    ? exact.term
     : "(Ingen beskrivelse funnet)";
 }
 
