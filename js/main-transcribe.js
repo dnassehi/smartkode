@@ -178,6 +178,8 @@ function setupEventListeners() {
           suggestions.push(matched[0])
         }
       }
+      //2b. Husk siste AI-forslag globalt
+      window.latestAiCodes = suggestions.map(c => c.code);
       // 3. Unike koder
       const uniqueCodes = [...new Set([...doctorInputCodes, ...suggestions.map(s => s.code)])];
       // 4. Presenter checkboxer
