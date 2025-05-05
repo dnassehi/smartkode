@@ -10,6 +10,7 @@
   "dependencies": {
     "electron": "^25.0.0",
     "sqlite3": "^5.1.7",
+    "string-similarity": "^4.0.4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
