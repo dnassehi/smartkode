@@ -51,21 +51,57 @@ if (!apiKey) {
 
 // Hjelpefunksjon: Bruk GPT til å hente medisinske nøkkelord fra notat
 async function fetchKeywordsFromGpt(noteText) {
-  const prompt = `Du er en medisinsk assistent. Ekstraher de viktigste symptomene, plagene eller diagnosene fra følgende P-SOAP-notat. Returner kun et gyldig JSON-objekt på norsk med format: { \"keywords\":[\"ord1\",\"ord2\",...] }\n\nNotat:\n\"\"\"${noteText}\"\"\"`;
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }] })
-  });
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content || "";
+  const prompt = `Du er en medisinsk assistent. Ekstraher de viktigste symptomene, plagene eller diagnosene fra følgende P-SOAP-notat. Returner kun et gyldig JSON-objekt på norsk med format: { "keywords":["ord1","ord2",...] }\n\nNotat:\n"""${noteText}"""`;
+  let data;
   try {
-    const parsed = JSON.parse(content);
-    if (parsed && Array.isArray(parsed.keywords)) return parsed.keywords;
-    throw new Error("Mangler 'keywords'-liste");
-  } catch {
-    throw new Error("Kunne ikke tolke nøkkelord fra AI.");
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error?.message || `OpenAI feilet med status ${res.status}`);
+    }
+    data = await res.json();
+  } catch (err) {
+    console.error("fetchKeywordsFromGpt → fetch/res.json feilet:", err);
+    throw err;
   }
+
+  // Hent ut tekstinnholdet fra AI
+  const content = data.choices?.[0]?.message?.content || "";
+  console.log("fetchKeywordsFromGpt → rå AI-svar:", content);
+
+  // Strip ut JSON-objektet som tekst
+  const match = content.match(/\{[\s\S]*\}/);
+  if (!match) {
+    console.error("fetchKeywordsFromGpt → fant ingen JSON i AI-svaret");
+    throw new Error("Kunne ikke finne JSON-objekt i AI-svaret");
+  }
+
+  // Parse akkurat JSON-biten
+  let parsed;
+  try {
+    parsed = JSON.parse(match[0]);
+  } catch (err) {
+    console.error("fetchKeywordsFromGpt → JSON.parse feilet på:", match[0], err);
+    throw new Error("Kunne ikke tolke nøkkelord fra AI som gyldig JSON");
+  }
+
+  // Valider at det finnes en liste
+  if (!parsed.keywords || !Array.isArray(parsed.keywords)) {
+    console.error("fetchKeywordsFromGpt → mangler keywords-array eller feil type:", parsed);
+    throw new Error("AI-svaret inneholder ikke en gyldig 'keywords'-liste");
+  }
+
+  return parsed.keywords;
 }
 
 // Hjelpefunksjon: Søk ICPC-2-koder via Helsedirektoratets FAT API
@@ -154,8 +190,9 @@ function setupEventListeners() {
         label.appendChild(document.createTextNode(` ${code} – ${desc}`));
         icpcSuggestionsList.appendChild(label);
       });
-    } catch {
-      icpcSuggestionsList.textContent = 'Kan ikke hente koder.';
+    } catch (error) {
+      console.error("Feil ved henting av ICPC-koder:", error);
+      icpcSuggestionsList.textContent = `Feil: ${error.message}`;
     }});
 
   // Event: Start opptak
