@@ -1,13 +1,14 @@
 // main-transcribe.js
 console.log('🔧 main-transcribe.js starter');
 
-import { initTranscribeLanguage } from './languageLoaderUsage.js';
-import { initGuideOverlay } from './ui.js';
-import { matchKeywordToCodes } from './icpcMatcher';
+const { initTranscribeLanguage } = require('./languageLoaderUsage.js');
+const { initGuideOverlay }    = require('./ui.js');
+const { matchKeywordToCodes }  = require('./icpcMatcher.js');
+const stringSimilarity         = require('string-similarity');
 
 // Node.js-moduler for filsystem og database (gjennom Electron)
-const fs = window.require ? window.require('fs') : undefined;
-const sqlite3 = window.require ? window.require('sqlite3') : undefined;
+const fs = require('fs');
+const sqlite3 = require('sqlite3');
 
 // Felles headers
 const BASE = 'https://fat.kote.helsedirektoratet.no/api/diagnosis';
