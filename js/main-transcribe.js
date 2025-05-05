@@ -205,9 +205,10 @@ function setupEventListeners() {
       // 1. Hent nøkkelord
       const keywords = await fetchKeywordsFromGpt(noteText);
       // 2. Søk og velg koder
-      let suggestions = [];
-      //const matcherOptions = { preferredChapters: ['L'] }; //henger sammen med kode nedenfor
+      //const matcherOptions = { preferredChapters: ['L'] }; // henger sammen med kode nedenfor
+      const suggestions = [];
       for (const kw of keywords) {
+        // Her bruker vi SNOMED → ICPC-kallet
         const codes = await searchFatCodes(kw);
         const matched = matchKeywordToCodes(kw, codes); // sett ev. inn matcherOptions etter codes
         if (matched.length) {
@@ -486,7 +487,7 @@ function setupEventListeners() {
 
 // Hent beskrivelse for én kode ved å søke på koden selv
 async function fetchDescription(code) {
-  const matches = await searchCodes(code);
+  const matches = await searchFatCodes(code);
   // Finn eksakt match på code (case-insensitivt)
   const exact = matches.find(m => m.code.toUpperCase() === code.toUpperCase());
   return exact
