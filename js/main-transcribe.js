@@ -1,4 +1,4 @@
-// main-transcribe.js – Oppdatert versjon med lokal SQLite database (erstatter MySQL)
+// main-transcribe.js
 console.log('🔧 main-transcribe.js starter');
 
 import { initTranscribeLanguage } from './languageLoaderUsage.js';
@@ -10,7 +10,7 @@ const fs = window.require ? window.require('fs') : undefined;
 const sqlite3 = window.require ? window.require('sqlite3') : undefined;
 
 // Felles headers
-const BASE = 'https://fat.kote.helsedirektoratet.no/api/diagnosis?search';
+const BASE = 'https://fat.kote.helsedirektoratet.no/api/diagnosis';
 const HEADERS = {
   'Accept': 'application/json',
   'Accept-Language': 'nb'
@@ -47,19 +47,27 @@ async function fetchIcpcMapping(conceptId) {
 async function searchFatCodes(term) {
   // a) Finn alle relevante SNOMED-konsepter
   const concepts = await fetchConcepts(term);
-  const mappings = [];
-  for (const c of concepts) {
+  console.log(`fetchConcepts("${term}") ga ${concepts.length} konsepter`);
+
+  // === HER === paralleliserer vi mapping-hentingen
+  const mappings = await Promise.all(concepts.map(async c => {
     try {
       const map = await fetchIcpcMapping(c.conceptId);
-      mappings.push({
+      console.log(` → mapping for ${c.conceptId}:`, map.icpc2Code);
+      return {
         code: map.icpc2Code,
         term: map.icpc2Term
-      });
+      };
     } catch {
-      // hopp over konsepter som ikke har mapping
+      console.warn(`Ingen mapping for ${c.conceptId}`);
+      return null;
     }
-  }
-  return mappings;
+  }));
+
+  // Filtrer bort mislykkede calls
+  const validMappings = mappings.filter(m => m);
+  console.log(`searchFatCodes("${term}") returnerer ${validMappings.length} ICPC-koder`);
+  return validMappings;
 }
 
 // Tilstand for lydopptak og valgt prompt
