@@ -9,6 +9,59 @@ import { matchKeywordToCodes } from './icpcMatcher';
 const fs = window.require ? window.require('fs') : undefined;
 const sqlite3 = window.require ? window.require('sqlite3') : undefined;
 
+// Felles headers
+const BASE = 'https://fat.kote.helsedirektoratet.no/api/diagnosis';
+const HEADERS = {
+  'Accept': 'application/json',
+  'Accept-Language': 'nb'
+};
+
+// 1) Søk SNOMED-CT
+async function fetchConcepts(term) {
+  const url = `${BASE}?search=${encodeURIComponent(term)}&unreleasedContent=false`;
+  const res = await fetch(url, { headers: HEADERS });
+  if (!res.ok) throw new Error(`SNOMED-søk feilet: ${res.status}`);
+  return await res.json(); 
+  // returnerer et array av konsepter, hver med .conceptId, .termNorwegianSCT.value, osv.
+}
+
+// 2) Hent ICPC-2-mapping for ett conceptId
+async function fetchIcpcMapping(conceptId) {
+  const url = `${BASE}/icpc2/${conceptId}?unreleasedContent=false`;
+  const res = await fetch(url, { headers: HEADERS });
+  if (!res.ok) throw new Error(`ICPC-mapping feilet: ${res.status}`);
+  return await res.json(); 
+  /* eksempel-respons:
+    {
+      conceptId: "73211009",
+      fsn: "...",
+      termNorwegianSCT:{value:"diabetes",…},
+      icpc2Code: "T90",
+      icpc2Term: "Diabetes type 2",
+      …
+    }
+  */
+}
+
+// 3) Kombinert “searchCodes”-erstatning
+async function searchFatCodes(term) {
+  // a) Finn alle relevante SNOMED-konsepter
+  const concepts = await fetchConcepts(term);
+  const mappings = [];
+  for (const c of concepts) {
+    try {
+      const map = await fetchIcpcMapping(c.conceptId);
+      mappings.push({
+        code: map.icpc2Code,
+        term: map.icpc2Term
+      });
+    } catch {
+      // hopp over konsepter som ikke har mapping
+    }
+  }
+  return mappings;
+}
+
 // Tilstand for lydopptak og valgt prompt
 let mediaRecorder;
 let audioChunks = [];
@@ -171,7 +224,7 @@ function setupEventListeners() {
       let suggestions = [];
       //const matcherOptions = { preferredChapters: ['L'] }; //henger sammen med kode nedenfor
       for (const kw of keywords) {
-        const codes = await searchCodes(kw);
+        const codes = await searchFatCodes(kw);
         const matched = matchKeywordToCodes(kw, codes); // sett ev. inn matcherOptions etter codes
         if (matched.length) {
           // du kan ta flere, f.eks. top 2: matched.slice(0,2)
