@@ -158,22 +158,6 @@ async function fetchKeywordsFromGpt(noteText) {
   return parsed.keywords;
 }
 
-// Hjelpefunksjon: Søk ICPC-2-koder via Helsedirektoratets FAT API
-async function searchCodes(keyword) {
-  const url = `https://fat.kote.helsedirektoratet.no/api/diagnosis/icpc2?search=${encodeURIComponent(keyword)}`;
-  try {
-    const res = await fetch(url, { headers: { "Accept": "application/json" } });
-    if (!res.ok) return [];
-    const json = await res.json();
-    if (!json.data) return [];
-    return json.data
-      .filter(item => item.icpc2Code)
-      .map(item => ({ code: item.icpc2Code, term: item.icpc2Term.toLowerCase() }));
-  } catch {
-    return [];
-  }
-}
-
 // Initialiser app når DOM er ferdig lastet
 window.addEventListener('DOMContentLoaded', () => {
   initTranscribeLanguage();
