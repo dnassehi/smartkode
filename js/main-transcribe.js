@@ -78,7 +78,7 @@ async function searchCodes(keyword) {
     if (!json.data) return [];
     return json.data
       .filter(item => item.icpc2Code)
-      .map(item => ({ code: item.icpc2Code, description: item.icpc2Term }));
+      .map(item => ({ code: item.icpc2Code, term: item.icpc2Term.toLowerCase() }));
   } catch {
     return [];
   }
@@ -97,22 +97,66 @@ function setupEventListeners() {
   const stopBtn = document.getElementById('stopBtn');
   const generateNoteBtn = document.getElementById('generateNoteBtn');
   const transcriptOutput = document.getElementById('transcriptOutput');
-  const noteOutput = document.getElementById('noteOutput');
   const recordingTimerEl = document.getElementById('recordingTimer');
   const completionTimerEl = document.getElementById('completionTimer');
   const noteTimerEl = document.getElementById('noteTimer');
   const icpcSection = document.getElementById('icpc-section');
-  const icpcInput = document.getElementById('icpcInput');
   const icpcNextBtn = document.getElementById('icpcNextBtn');
   const icpcSuggestionsDiv = document.getElementById('icpcSuggestions');
   const icpcSuggestionsList = document.getElementById('icpcSuggestionsList');
   const icpcDoneBtn = document.getElementById('icpcDoneBtn');
-
+  const icpcInput = document.getElementById('icpcInput');
+  const noteOutput = document.getElementById('noteOutput');
+  // Justerer høyden på notat-tekstområdet dynamisk
   function adjustNoteHeight() {
     noteOutput.style.height = 'auto';
     noteOutput.style.height = Math.max(noteOutput.scrollHeight, 100) + 'px';
   }
+// Kjør funksjonen når brukeren skriver i notatet
   noteOutput.addEventListener('input', adjustNoteHeight);
+
+  // === Event: Neste (hent forslag til ICPC-2 koder) ===
+  icpcNextBtn.addEventListener('click', async () => {
+    const noteText = noteOutput.value.trim();
+    if (!noteText) return alert('Notat mangler');
+    const doctorInputCodes = icpcInput.value
+      .toUpperCase()
+      .split(/\s+/)
+      .filter(c => /^[A-Z]\d{2}$/.test(c));
+  
+    icpcSuggestionsList.innerHTML = '<em>Henter forslag...</em>';
+    icpcSuggestionsDiv.style.display = 'block';
+  
+    try {
+      // 1. Hent nøkkelord
+      const keywords = await fetchKeywordsFromGpt(noteText);
+      // 2. Søk og velg koder
+      let suggestions = [];
+      for (const kw of keywords) {
+        const codes = await searchCodes(kw);
+        const exact = codes.filter(c => c.term === kw.toLowerCase());
+        suggestions.push(...(exact.length ? exact : codes.slice(0, 1)));
+      }
+      // 3. Unike koder
+      const uniqueCodes = [...new Set([...doctorInputCodes, ...suggestions.map(s => s.code)])];
+      // 4. Presenter checkboxer
+      icpcSuggestionsList.innerHTML = '';  
+      uniqueCodes.forEach(code => {
+        const entry = suggestions.find(s => s.code === code);
+        const desc = entry ? entry.term : '(ingen beskrivelse)';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = code;
+        if (doctorInputCodes.includes(code)) cb.checked = true;
+        const label = document.createElement('label');
+        label.style.display = 'block';
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(` ${code} – ${desc}`));
+        icpcSuggestionsList.appendChild(label);
+      });
+    } catch {
+      icpcSuggestionsList.textContent = 'Kan ikke hente koder.';
+    }});
 
   // Event: Start opptak
   startBtn.addEventListener('click', async () => {
@@ -247,41 +291,6 @@ function setupEventListeners() {
       adjustNoteHeight();
       console.error("Note generation error:", err);
     });
-  });
-
-  // === Event: Neste (hent forslag til ICPC-2 koder) ===
-  icpcNextBtn.addEventListener('click', async () => {
-    const noteText = noteOutput.value || "";
-    if (!noteText.trim()) return alert("Notatet er tomt eller ikke generert ennå.");
-    const doctorInputCodes = icpcInput.value.trim().toUpperCase().split(/\s+/).filter(c => /^[A-Z]\d{2}$/.test(c));
-    icpcSuggestionsList.innerHTML = "<em>Henter forslag...</em>";
-    icpcSuggestionsDiv.style.display = 'block';
-
-    try {
-      const keywords = await fetchKeywordsFromGpt(noteText);
-      let suggestions = [];
-      for (const kw of keywords) suggestions.push(...await searchCodes(kw));
-      const suggestionCodes = [...new Set(suggestions.map(s => s.code.toUpperCase()))];
-      window.latestAiCodes = suggestionCodes;
-      window.latestDoctorInputCodes = doctorInputCodes;
-
-      const allCodes = [...new Set([...doctorInputCodes, ...suggestionCodes])];
-      icpcSuggestionsList.innerHTML = "";
-      for (const code of allCodes) {
-        const entry = suggestions.find(s => s.code.toUpperCase() === code);
-        const desc = entry ? entry.description : "(Ingen beskrivelse)";
-        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = code;
-        if (doctorInputCodes.includes(code)) cb.checked = true;
-        const label = document.createElement('label');
-        label.style.display = 'block';
-        label.appendChild(cb);
-        label.appendChild(document.createTextNode(` ${code} – ${desc}`));
-        icpcSuggestionsList.appendChild(label);
-      }
-    } catch (err) {
-      console.error('Feil ved henting av ICPC-2-koder:', err);
-      icpcSuggestionsList.textContent = err.message || 'En feil oppstod.';
-    }
   });
 
   // Event: Ferdig (lagre ICPC-2 koder i lokal database)
