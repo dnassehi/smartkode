@@ -1,9 +1,9 @@
 // main-transcribe.js
 console.log('🔧 main-transcribe.js starter');
 
-const { initTranscribeLanguage } = require('./languageLoaderUsage.js');
-const { initGuideOverlay }    = require('./ui.js');
-const { matchKeywordToCodes }  = require('./icpcMatcher.js');
+const { initTranscribeLanguage } = require('./js/languageLoaderUsage.js');
+const { initGuideOverlay }    = require('./js/ui.js');
+const { matchKeywordToCodes }  = require('./js/icpcMatcher.js');
 const stringSimilarity         = require('string-similarity');
 
 // Node.js-moduler for filsystem og database (gjennom Electron)
