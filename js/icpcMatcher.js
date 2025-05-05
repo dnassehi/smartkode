@@ -1,5 +1,5 @@
 // icpcMatcher.js
-import stringSimilarity from 'string-similarity'; // installer f.eks. via npm
+const stringSimilarity = require('string-similarity'); // installer f.eks. via npm
 
 // Du kan justere vektene her:
 const WEIGHTS = {
@@ -50,6 +50,22 @@ function matchKeywordToCodes(kw, codes, options = {}) {
   // Sortér etter score og returnér
   scored.sort((a, b) => b.score - a.score);
   return scored.map(s => s.codeObj);
+
+  // Viser topp N resultarer. N er tallet etter ||
+  const maxResults = options.maxResults || 10;
+
+  const result = scored
+    .filter(s => s.score >= minScore)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxResults)
+    .map(s => s.codeObj);
+
+  return result;
+
+  // Debug-logging
+  scored.forEach(s => {
+    console.log(`KW="${term}" → ${s.codeObj.code}: score=${s.score.toFixed(2)}`);
+  });
 }
 
 // Eksporter alle
