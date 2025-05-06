@@ -13,23 +13,24 @@ const sqlite3 = require('sqlite3');
 
 // Felles headers
 const SNOMED_BASE = 
-  'https://fat.kote.helsedirektoratet.no/api/Terminology/SnomedCT';
+  'https://fat.kote.helsedirektoratet.no/api/snomed';
 const HEADERS = {
   'Accept': 'application/json',
   'Accept-Language': 'nb'
 };
 
-// 1) Søk SNOMED-CT
+// 1) Søk SNOMED-CT på tekst – bruk /api/snomed?search=
 async function fetchConcepts(term) {
-  // Endepunkt for å søke på beskrivelsen
-  const url = 
-    `${SNOMED_BASE}/search?term=${encodeURIComponent(term)}`;
+  // Prøv ‘search’-parametre – juster om API-et bruker ‘term=’ i stedet
+  const url = `${SNOMED_BASE}?search=${encodeURIComponent(term)}&size=50`;
+  console.log('🔍 SNOMED-søker på:', url);
   const res = await fetch(url, { headers: HEADERS });
-  if (!res.ok) throw new Error(`SNOMED-søk feilet: ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`SNOMED-søk feilet: ${res.status}`);
+  }
   const data = await res.json();
-  // Legg merke til om API-et pakker listen under data.items eller leverer
-  // en rå array
-  return Array.isArray(data) ? data : data.items;
+  // Noen API-er legger items under data.items:
+  return Array.isArray(data) ? data : (data.items || []);
 }
 
 // 2) Hent ICPC-2-mapping for ett conceptId
