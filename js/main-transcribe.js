@@ -11,47 +11,107 @@ const icpcData = require('./js/icpc-2.json').data;
 const fs = require('fs');
 const sqlite3 = require('sqlite3');
 
+const OPENAI_API_KEY = apiKey; // allerede lastet fra API.txt
+const MODEL = 'gpt-4o-mini';
+
 /**
- * Søker i lokal ICPC-2-fil på ett nøkkelord, med fallback til fuzzy navnssøk.
+ * Bruk OpenAI til å forenkle et rått nøkkelord til ett enkelt token.
+ * @param {string} raw – råt nøkkelord (f.eks. "diabetisk kontroll")
+ * @returns {Promise<string>} – forenklet token (f.eks. "diabetes")
  */
-function searchLocalCodes(term) {
-  const t = term.toLowerCase().trim();
+async function simplifyKeyword(raw) {
+  const prompt = `Du er en hjelpefunksjon som tar et sammensatt søkeord fra en klinisk notat-assistent og returnerer ett enkelt søketoken.  
+Eksempel:  
+- "diabetisk kontroll" → "diabetes"  
+- "HbA1c 54" → "hba1c"  
+- "blodtrykk 168/95" → "blodtrykk"  
+Returner bare selve token, uten andre ord eller tegn.  
+Søkeord: "${raw}"  
+Token:`;
+  
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0
+    })
+  });
+  const { choices } = await res.json();
+  const tok = choices?.[0]?.message?.content?.trim();
+  return tok || raw.toLowerCase().replace(/\W+/g,' ').split(' ')[0];
+}
 
-  // 1) Presise treff (uten exclusion)
-  let results = icpcData.filter(entry => {
-    const inc   = (entry.inclusion   || '').toLowerCase();
-    const more  = (entry.moreInfo    || '').toLowerCase();
-    const nameN = (entry.nameNorwegian || '').toLowerCase();
-    const nameE = (entry.nameEnglish   || '').toLowerCase();
+/**
+ * Asynkron versjon av searchLocalCodes som først forenkler tokens via GPT.
+ */
+async function searchLocalCodes(rawTerm) {
+  // 1) Bryt ned rå-term i potensielle tokens
+  const parts = rawTerm
+    .toLowerCase()
+    .replace(/\//g,' ')
+    .split(/\s+/)
+    .filter(Boolean);
 
-    const matchInText = nameN.includes(t)
-                     || nameE.includes(t)
-                     || inc.includes(t)
-                     || more.includes(t);
+  // 2) Forenkle hvert token via GPT
+  const simplifiedTokens = await Promise.all(parts.map(simplifyKeyword));
+
+  // 3) Utfør ellers samme logikk som før, men mot simplifiedTokens:
+  const strictSet = new Set();
+  simplifiedTokens.forEach(t => {
+    icpcData.forEach(entry => {
+      const inc    = (entry.inclusion   || '').toLowerCase();
+      const more   = (entry.moreInfo    || '').toLowerCase();
+      const exc    = (entry.exclusion   || '').toLowerCase();
+      const nameN  = (entry.nameNorwegian || '').toLowerCase();
+      const text60 = (entry.textMax60     || '').toLowerCase();
+      if (!exc.includes(t) && (
+           nameN.includes(t) ||
+           text60.includes(t) ||
+           inc.includes(t) ||
+           more.includes(t)
+         )) {
+        strictSet.add(entry);
+      }
+    });
   });
 
-  // 2) Fuzzy-fallback hvis ingen treff
+  let results = Array.from(strictSet);
+  // 4) Fuzzy-fallback om ingen presise treff (som før)
   if (results.length === 0) {
-    results = icpcData
-      .map(entry => {
-        const nN = entry.nameNorwegian.toLowerCase();
-        const nE = (entry.nameEnglish || '').toLowerCase();
-        const score = Math.max(
-          stringSimilarity.compareTwoStrings(t, nN),
-          stringSimilarity.compareTwoStrings(t, nE)
+    const fuzzy = [];
+    simplifiedTokens.forEach(t => {
+      icpcData.forEach(entry => {
+        const nameN  = (entry.nameNorwegian || '').toLowerCase();
+        const text60 = (entry.textMax60     || '').toLowerCase();
+        const score  = Math.max(
+          stringSimilarity.compareTwoStrings(t, nameN),
+          stringSimilarity.compareTwoStrings(t, text60)
         );
-        return { entry, score };
-      })
-      .filter(x => x.score >= 0.3)
+        if (score >= 0.3) fuzzy.push({ entry, score });
+      });
+    });
+    const seen = new Set();
+    results = fuzzy
       .sort((a,b) => b.score - a.score)
+      .filter(x => {
+        const code = x.entry.codeValue;
+        if (seen.has(code)) return false;
+        seen.add(code);
+        return true;
+      })
       .slice(0,5)
       .map(x => x.entry);
   }
 
-  // 3) Returnér
-  return results.map(entry => ({
-    code: entry.codeValue,
-    term: entry.nameNorwegian
+  // 5) Returnér som før
+  return results.map(e => ({
+    code: e.codeValue,
+    term: e.textMax60 || e.nameNorwegian
   }));
 }
 
