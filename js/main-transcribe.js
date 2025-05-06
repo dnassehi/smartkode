@@ -4,36 +4,53 @@ console.log('🔧 main-transcribe.js starter');
 const { initTranscribeLanguage } = require('./js/languageLoaderUsage.js');
 const { initGuideOverlay }    = require('./js/ui.js');
 const { matchKeywordToCodes }  = require('./js/icpcMatcher.js');
-const icpcData = require('./js/icpc-2.json').data;
 const stringSimilarity         = require('string-similarity');
+const icpcData = require('./js/icpc-2.json').data;
 
 // Node.js-moduler for filsystem og database (gjennom Electron)
 const fs = require('fs');
 const sqlite3 = require('sqlite3');
 
 /**
- * Søker i din lokale ICPC-2 fil på ett nøkkelord.
- * @param {string} term – nøkkelord fra AI (eks. "diabetes")
- * @returns {Array<{code:string,term:string}>}
+ * Søker i lokal ICPC-2-fil på ett nøkkelord, med fallback til fuzzy navnssøk.
  */
 function searchLocalCodes(term) {
   const t = term.toLowerCase().trim();
-  return icpcData
-    .filter(entry => {
-      const inc  = entry.inclusion?.toLowerCase()  || '';
-      const more = entry.moreInfo?.toLowerCase()   || '';
-      const exc  = entry.exclusion?.toLowerCase()  || '';
-      const nameN = (entry.nameNorwegian || '').toLowerCase();
-      const nameE = (entry.nameEnglish   || '').toLowerCase();
-      // Sjekk mot navn eller tabeller, og ekskluder de med exclusion
-      const matchInText = nameN.includes(t) || nameE.includes(t) || inc.includes(t) || more.includes(t);
-      const excluded   = exc.includes(t);
-      return matchInText && !excluded;
-    })
-    .map(entry => ({
-      code: entry.codeValue,
-      term: entry.nameNorwegian
-    }));
+
+  // 1) Først: strenge inklusjons/eksklusjons-treff
+  let results = icpcData.filter(entry => {
+    const inc   = (entry.inclusion   || '').toLowerCase();
+    const more  = (entry.moreInfo    || '').toLowerCase();
+    const exc   = (entry.exclusion   || '').toLowerCase();
+    const nameN = (entry.nameNorwegian || '').toLowerCase();
+    const nameE = (entry.nameEnglish   || '').toLowerCase();
+    const matchInText = nameN.includes(t)
+                     || nameE.includes(t)
+                     || inc.includes(t)
+                     || more.includes(t);
+    return matchInText && !exc.includes(t);
+  });
+
+  // 2) Hvis ingen treff: fuzzy-søk mot navn (“Diabetes”, “Feber” osv.)
+  if (results.length === 0) {
+    results = icpcData
+      .map(entry => ({
+        entry,
+        score: stringSimilarity.compareTwoStrings(
+                 t,
+                 entry.nameNorwegian.toLowerCase()
+               )
+      }))
+      .sort((a,b) => b.score - a.score)
+      .slice(0, 5)       // topp 5
+      .map(x => x.entry);
+  }
+
+  // 3) Returnér på format {code, term}
+  return results.map(entry => ({
+    code: entry.codeValue,
+    term: entry.nameNorwegian
+  }));
 }
 
 // Tilstand for lydopptak og valgt prompt
@@ -461,7 +478,7 @@ function setupEventListeners() {
 
 // Hent beskrivelse for én kode ved å søke på koden selv
 async function fetchDescription(code) {
-  const matches = await searchFatCodes(code);
+  const matches = await searchLocalCodes(code);
   // Finn eksakt match på code (case-insensitivt)
   const exact = matches.find(m => m.code.toUpperCase() === code.toUpperCase());
   return exact
