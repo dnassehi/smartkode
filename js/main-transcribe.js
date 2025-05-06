@@ -11,6 +11,19 @@ const icpcData = require('./js/icpc-2.json').data;
 const fs = require('fs');
 const sqlite3 = require('sqlite3');
 
+// Les OpenAI API-nøkkel fra fil (API.txt)
+let apiKey = "";
+try {
+  const keyData = fs ? fs.readFileSync('API.txt', 'utf8') : null;
+  if (keyData) apiKey = keyData.toString().trim();
+} catch (err) {
+  console.warn("Kunne ikke lese API.txt:", err);
+}
+if (!apiKey) {
+  alert("API-nøkkel mangler. Sørg for at filen API.txt eksisterer og inneholder nøkkelen.");
+  window.location.href = "index.html";
+}
+
 const OPENAI_API_KEY = apiKey; // allerede lastet fra API.txt
 const MODEL = 'gpt-4o-mini';
 
@@ -141,19 +154,6 @@ function buildPsoapPrompt(transcriptText) {
 
 Transkripsjon:
 "${transcriptText}"`;
-}
-
-// Les OpenAI API-nøkkel fra fil (API.txt)
-let apiKey = "";
-try {
-  const keyData = fs ? fs.readFileSync('API.txt', 'utf8') : null;
-  if (keyData) apiKey = keyData.toString().trim();
-} catch (err) {
-  console.warn("Kunne ikke lese API.txt:", err);
-}
-if (!apiKey) {
-  alert("API-nøkkel mangler. Sørg for at filen API.txt eksisterer og inneholder nøkkelen.");
-  window.location.href = "index.html";
 }
 
 // Hjelpefunksjon: Bruk GPT til å hente medisinske nøkkelord fra notat
