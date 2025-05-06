@@ -3,6 +3,7 @@ console.log('🔧 main-transcribe.js starter');
 
 const { initTranscribeLanguage } = require('./js/languageLoaderUsage.js');
 const { initGuideOverlay }    = require('./js/ui.js');
+const { findNearestMapping } = require('./js/icpcFallbackMapper.js');
 const { matchKeywordToCodes }  = require('./js/icpcMatcher.js');
 const stringSimilarity         = require('string-similarity');
 
@@ -50,17 +51,19 @@ async function searchFatCodes(term) {
   const concepts = await fetchConcepts(term);
   console.log(`fetchConcepts("${term}") ga ${concepts.length} konsepter`);
 
-  // === HER === paralleliserer vi mapping-hentingen
+  // === NY DEL: finn nærmeste ICPC-mapping (evt. via foreldrebegrep)
   const mappings = await Promise.all(concepts.map(async c => {
     try {
-      const map = await fetchIcpcMapping(c.conceptId);
-      console.log(` → mapping for ${c.conceptId}:`, map.icpc2Code);
-      return {
-        code: map.icpc2Code,
-        term: map.icpc2Term
-      };
-    } catch {
-      console.warn(`Ingen mapping for ${c.conceptId}`);
+      // erstatt fetchIcpcMapping med fallback-logikken din
+      const map = await findNearestMapping(c.conceptId);
+      if (!map) {
+        console.warn(`Ingen mapping funnet for ${c.conceptId}`);
+        return null;
+      }
+      console.log(` → nærmeste mapping for ${c.conceptId}:`, map.targetId);
+      return { code: map.targetId, term: map.targetName };
+    } catch (err) {
+      console.error(`Feil under mapping for ${c.conceptId}:`, err);
       return null;
     }
   }));
