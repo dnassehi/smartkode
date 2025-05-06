@@ -3,7 +3,6 @@ console.log('🔧 main-transcribe.js starter');
 
 const { initTranscribeLanguage } = require('./js/languageLoaderUsage.js');
 const { initGuideOverlay }    = require('./js/ui.js');
-const { findNearestMapping } = require('./js/icpcFallbackMapper.js');
 const { matchKeywordToCodes }  = require('./js/icpcMatcher.js');
 const icpcData = require('./js/icpc-2.json').data;
 const stringSimilarity         = require('string-similarity');
