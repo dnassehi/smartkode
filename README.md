@@ -90,6 +90,7 @@ For å pakke appen for Windows:
 ```bash
 npm run package-win
 ```
+Flytt så *API.txt* og *ID.txt* til den nye *root*-mappen.
 
 ## 📄 Lisens
 
