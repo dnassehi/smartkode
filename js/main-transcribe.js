@@ -5,80 +5,32 @@ const { initTranscribeLanguage } = require('./js/languageLoaderUsage.js');
 const { initGuideOverlay }    = require('./js/ui.js');
 const { findNearestMapping } = require('./js/icpcFallbackMapper.js');
 const { matchKeywordToCodes }  = require('./js/icpcMatcher.js');
+const icpcData = require('./js/icpc-2.json').data;
 const stringSimilarity         = require('string-similarity');
 
 // Node.js-moduler for filsystem og database (gjennom Electron)
 const fs = require('fs');
 const sqlite3 = require('sqlite3');
 
-// Felles headers
-const SNOMED_BASE = 
-  'https://fat.kote.helsedirektoratet.no/api/snomed';
-const HEADERS = {
-  'Accept': 'application/json',
-  'Accept-Language': 'nb'
-};
-
-// 1) Søk SNOMED-CT på tekst – bruk /api/snomed?search=
-async function fetchConcepts(term) {
-  // Prøv ‘search’-parametre – juster om API-et bruker ‘term=’ i stedet
-  const url = `${SNOMED_BASE}?search=${encodeURIComponent(term)}&size=50`;
-  console.log('🔍 SNOMED-søker på:', url);
-  const res = await fetch(url, { headers: HEADERS });
-  if (!res.ok) {
-    throw new Error(`SNOMED-søk feilet: ${res.status}`);
-  }
-  const data = await res.json();
-  // Noen API-er legger items under data.items:
-  return Array.isArray(data) ? data : (data.items || []);
-}
-
-// 2) Hent ICPC-2-mapping for ett conceptId
-async function fetchIcpcMapping(conceptId) {
-  const url = `${BASE}/icpc2/${conceptId}?unreleasedContent=false`;
-  const res = await fetch(url, { headers: HEADERS });
-  if (!res.ok) throw new Error(`ICPC-mapping feilet: ${res.status}`);
-  return await res.json(); 
-  /* eksempel-respons:
-    {
-      conceptId: "73211009",
-      fsn: "...",
-      termNorwegianSCT:{value:"diabetes",…},
-      icpc2Code: "T90",
-      icpc2Term: "Diabetes type 2",
-      …
-    }
-  */
-}
-
-// 3) Kombinert “searchCodes”-erstatning
-async function searchFatCodes(term) {
-  // a) Finn alle relevante SNOMED-konsepter
-  const concepts = await fetchConcepts(term);
-  console.log(`fetchConcepts("${term}") ga ${concepts.length} konsepter`);
-
-  // === NY DEL: finn nærmeste ICPC-mapping via findNearestMapping()
-  const mappings = await Promise.all(
-    concepts.map(async c => {
-      try {
-        const map = await findNearestMapping(c.conceptId);
-        if (!map) {
-          console.warn(`Ingen mapping funnet for ${c.conceptId}`);
-          return null;
-        }
-        console.log(` → nærmeste mapping for ${c.conceptId}:`, map.targetId);
-        return { code: map.targetId, term: map.targetName };
-      } catch (err) {
-        console.error(`Feil under mapping for ${c.conceptId}:`, err);
-        return null;
-      }
+/**
+ * Søker i din lokale ICPC-2 fil på ett nøkkelord.
+ * @param {string} term – nøkkelord fra AI (eks. "diabetes")
+ * @returns {Array<{code:string,term:string}>}
+ */
+function searchLocalCodes(term) {
+  const t = term.toLowerCase().trim();
+  return icpcData
+    .filter(entry => {
+      const inc  = entry.inclusion?.toLowerCase()  || '';
+      const more = entry.moreInfo?.toLowerCase()   || '';
+      const exc  = entry.exclusion?.toLowerCase()  || '';
+      // må finnes i inclusion eller moreInfo, og ikke i exclusion
+      return (inc.includes(t) || more.includes(t)) && !exc.includes(t);
     })
-  );
-
-  // Filtrer bort mislykkede calls
-  const validMappings = mappings.filter(m => m);
-  console.log(`searchFatCodes("${term}") returnerer ${validMappings.length} ICPC-koder`);
-  return validMappings;
+    .map(entry => ({
+      code: entry.codeValue,
+      term: entry.nameNorwegian
+    }));
 }
 
 // Tilstand for lydopptak og valgt prompt
@@ -227,8 +179,8 @@ function setupEventListeners() {
       //const matcherOptions = { preferredChapters: ['L'] }; // henger sammen med kode nedenfor
       const suggestions = [];
       for (const kw of keywords) {
-        // Her bruker vi SNOMED → ICPC-kallet
-        const codes = await searchFatCodes(kw);
+        // Her bruker vi ICPC-kallet
+        const codes = await searchLocalCodes(kw);
         const matched = matchKeywordToCodes(kw, codes); // sett ev. inn matcherOptions etter codes
         if (matched.length) {
           // du kan ta flere, f.eks. top 2: matched.slice(0,2)
