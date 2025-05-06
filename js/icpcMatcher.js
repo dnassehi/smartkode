@@ -4,9 +4,9 @@ const stringSimilarity = require('string-similarity'); // installer f.eks. via n
 // Du kan justere vektene her:
 const WEIGHTS = {
   exact:    100,  // perfekt match
-  substring: 50,  // beskrivelse inneholder søkeordet
-  fuzzy:    30,   // fuzzy match (Levenshtein)
-  chapterBoost: 20 // ekstra hvis koden er i relevant kapittel
+  substring: 80,  // beskrivelse inneholder søkeordet
+  fuzzy:    10,   // fuzzy match (Levenshtein)
+  chapterBoost: 30 // ekstra hvis koden er i relevant kapittel
 };
 
 // Stop‐ord (kan utvides dynamisk)

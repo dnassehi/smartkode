@@ -265,8 +265,9 @@ function setupEventListeners() {
         const codes = await searchLocalCodes(kw);
         const matched = matchKeywordToCodes(kw, codes); // sett ev. inn matcherOptions etter codes
         if (matched.length) {
-          // du kan ta flere, f.eks. top 2: matched.slice(0,2)
-          suggestions.push(matched[0])
+          // Tar top 3
+          const topN = matched.slice(0, 3);
+          suggestions.push(...topN);
         }
       }
       //2b. Husk siste AI-forslag globalt
