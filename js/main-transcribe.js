@@ -17,11 +17,10 @@ const sqlite3 = require('sqlite3');
 function searchLocalCodes(term) {
   const t = term.toLowerCase().trim();
 
-  // 1) Presise treff
+  // 1) Presise treff (uten exclusion)
   let results = icpcData.filter(entry => {
     const inc   = (entry.inclusion   || '').toLowerCase();
     const more  = (entry.moreInfo    || '').toLowerCase();
-    const exc   = (entry.exclusion   || '').toLowerCase();
     const nameN = (entry.nameNorwegian || '').toLowerCase();
     const nameE = (entry.nameEnglish   || '').toLowerCase();
 
@@ -29,7 +28,6 @@ function searchLocalCodes(term) {
                      || nameE.includes(t)
                      || inc.includes(t)
                      || more.includes(t);
-    return matchInText && !exc.includes(t);
   });
 
   // 2) Fuzzy-fallback hvis ingen treff
