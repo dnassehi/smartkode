@@ -12,7 +12,8 @@ const fs = require('fs');
 const sqlite3 = require('sqlite3');
 
 // Felles headers
-const BASE = 'https://fat.kote.helsedirektoratet.no/api/diagnosis';
+const SNOMED_BASE = 
+  'https://fat.kote.helsedirektoratet.no/api/Terminology/SnomedCT';
 const HEADERS = {
   'Accept': 'application/json',
   'Accept-Language': 'nb'
@@ -20,11 +21,15 @@ const HEADERS = {
 
 // 1) Søk SNOMED-CT
 async function fetchConcepts(term) {
-  const url = `${BASE}?search=${encodeURIComponent(term)}&unreleasedContent=false`;
+  // Endepunkt for å søke på beskrivelsen
+  const url = 
+    `${SNOMED_BASE}/search?term=${encodeURIComponent(term)}`;
   const res = await fetch(url, { headers: HEADERS });
   if (!res.ok) throw new Error(`SNOMED-søk feilet: ${res.status}`);
-  return await res.json(); 
-  // returnerer et array av konsepter, hver med .conceptId, .termNorwegianSCT.value, osv.
+  const data = await res.json();
+  // Legg merke til om API-et pakker listen under data.items eller leverer
+  // en rå array
+  return Array.isArray(data) ? data : data.items;
 }
 
 // 2) Hent ICPC-2-mapping for ett conceptId
@@ -51,22 +56,23 @@ async function searchFatCodes(term) {
   const concepts = await fetchConcepts(term);
   console.log(`fetchConcepts("${term}") ga ${concepts.length} konsepter`);
 
-  // === NY DEL: finn nærmeste ICPC-mapping (evt. via foreldrebegrep)
-  const mappings = await Promise.all(concepts.map(async c => {
-    try {
-      // erstatt fetchIcpcMapping med fallback-logikken din
-      const map = await findNearestMapping(c.conceptId);
-      if (!map) {
-        console.warn(`Ingen mapping funnet for ${c.conceptId}`);
+  // === NY DEL: finn nærmeste ICPC-mapping via findNearestMapping()
+  const mappings = await Promise.all(
+    concepts.map(async c => {
+      try {
+        const map = await findNearestMapping(c.conceptId);
+        if (!map) {
+          console.warn(`Ingen mapping funnet for ${c.conceptId}`);
+          return null;
+        }
+        console.log(` → nærmeste mapping for ${c.conceptId}:`, map.targetId);
+        return { code: map.targetId, term: map.targetName };
+      } catch (err) {
+        console.error(`Feil under mapping for ${c.conceptId}:`, err);
         return null;
       }
-      console.log(` → nærmeste mapping for ${c.conceptId}:`, map.targetId);
-      return { code: map.targetId, term: map.targetName };
-    } catch (err) {
-      console.error(`Feil under mapping for ${c.conceptId}:`, err);
-      return null;
-    }
-  }));
+    })
+  );
 
   // Filtrer bort mislykkede calls
   const validMappings = mappings.filter(m => m);
