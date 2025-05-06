@@ -23,8 +23,12 @@ function searchLocalCodes(term) {
       const inc  = entry.inclusion?.toLowerCase()  || '';
       const more = entry.moreInfo?.toLowerCase()   || '';
       const exc  = entry.exclusion?.toLowerCase()  || '';
-      // må finnes i inclusion eller moreInfo, og ikke i exclusion
-      return (inc.includes(t) || more.includes(t)) && !exc.includes(t);
+      const nameN = (entry.nameNorwegian || '').toLowerCase();
+      const nameE = (entry.nameEnglish   || '').toLowerCase();
+      // Sjekk mot navn eller tabeller, og ekskluder de med exclusion
+      const matchInText = nameN.includes(t) || nameE.includes(t) || inc.includes(t) || more.includes(t);
+      const excluded   = exc.includes(t);
+      return matchInText && !excluded;
     })
     .map(entry => ({
       code: entry.codeValue,
