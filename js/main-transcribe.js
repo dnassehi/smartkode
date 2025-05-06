@@ -17,13 +17,14 @@ const sqlite3 = require('sqlite3');
 function searchLocalCodes(term) {
   const t = term.toLowerCase().trim();
 
-  // 1) Først: strenge inklusjons/eksklusjons-treff
+  // 1) Presise treff
   let results = icpcData.filter(entry => {
     const inc   = (entry.inclusion   || '').toLowerCase();
     const more  = (entry.moreInfo    || '').toLowerCase();
     const exc   = (entry.exclusion   || '').toLowerCase();
     const nameN = (entry.nameNorwegian || '').toLowerCase();
     const nameE = (entry.nameEnglish   || '').toLowerCase();
+
     const matchInText = nameN.includes(t)
                      || nameE.includes(t)
                      || inc.includes(t)
@@ -31,22 +32,25 @@ function searchLocalCodes(term) {
     return matchInText && !exc.includes(t);
   });
 
-  // 2) Hvis ingen treff: fuzzy-søk mot navn (“Diabetes”, “Feber” osv.)
+  // 2) Fuzzy-fallback hvis ingen treff
   if (results.length === 0) {
     results = icpcData
-      .map(entry => ({
-        entry,
-        score: stringSimilarity.compareTwoStrings(
-                 t,
-                 entry.nameNorwegian.toLowerCase()
-               )
-      }))
+      .map(entry => {
+        const nN = entry.nameNorwegian.toLowerCase();
+        const nE = (entry.nameEnglish || '').toLowerCase();
+        const score = Math.max(
+          stringSimilarity.compareTwoStrings(t, nN),
+          stringSimilarity.compareTwoStrings(t, nE)
+        );
+        return { entry, score };
+      })
+      .filter(x => x.score >= 0.3)
       .sort((a,b) => b.score - a.score)
-      .slice(0, 5)       // topp 5
+      .slice(0,5)
       .map(x => x.entry);
   }
 
-  // 3) Returnér på format {code, term}
+  // 3) Returnér
   return results.map(entry => ({
     code: entry.codeValue,
     term: entry.nameNorwegian
@@ -214,18 +218,29 @@ function setupEventListeners() {
       // 4. Presenter checkboxer
       icpcSuggestionsList.innerHTML = '';  
       uniqueCodes.forEach(code => {
-        const entry = suggestions.find(s => s.code === code);
-        const desc = entry ? entry.term : '(ingen beskrivelse)';
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.value = code;
-        if (doctorInputCodes.includes(code)) cb.checked = true;
-        const label = document.createElement('label');
-        label.style.display = 'block';
-        label.appendChild(cb);
-        label.appendChild(document.createTextNode(` ${code} – ${desc}`));
-        icpcSuggestionsList.appendChild(label);
-      });
+        const aiEntry = suggestions.find(s => s.code === code);
+        let desc;
+        if (aiEntry) {
+          desc = aiEntry.term;
+        } else {
+          const icpcEntry = icpcData.find(e =>
+            e.codeValue.trim().toUpperCase() === code
+          );
+          desc = icpcEntry
+            ? icpcEntry.nameNorwegian
+            : '(ingen beskrivelse)';
+  }
+  // Deretter bygger du label/checkbox slik du gjorde før:
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.value = code;
+  if (doctorInputCodes.includes(code)) cb.checked = true;
+  const label = document.createElement('label');
+  label.style.display = 'block';
+  label.appendChild(cb);
+  label.appendChild(document.createTextNode(` ${code} – ${desc}`));
+  icpcSuggestionsList.appendChild(label);
+});
     } catch (error) {
       console.error("Feil ved henting av ICPC-koder:", error);
       icpcSuggestionsList.textContent = `Feil: ${error.message}`;
