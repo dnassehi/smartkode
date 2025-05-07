@@ -158,7 +158,16 @@ Transkripsjon:
 
 // Hjelpefunksjon: Bruk GPT til å hente medisinske nøkkelord fra notat
 async function fetchKeywordsFromGpt(noteText) {
-  const prompt = `Du er en medisinsk assistent. Ekstraher de viktigste symptomene, plagene eller diagnosene fra følgende P-SOAP-notat. Returner kun et gyldig JSON-objekt på norsk med format: { "keywords":["ord1","ord2",...] }\n\nNotat:\n"""${noteText}"""`;
+  const systemPrompt = `
+Du er en medisinsk søkeord-generator.
+Basert på notatet, identifiser 3–5 entallsord for hoveddiagnoser eller kliniske funn.
+Regler:
+1. Entallsform (f.eks. "Migrene").
+2. Bruk standard medisinske hovedkategorier (f.eks. "Diabetes mellitus").
+3. Fjern tall/doser (f.eks. "HbA1c 54" → "HbA1c").
+4. Returner kun JSON: { "keywords": ["term1","term2",…] }
+`.trim();
+  const userPrompt = noteText;
   let data;
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -169,7 +178,11 @@ async function fetchKeywordsFromGpt(noteText) {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }]
+        temperature: 0,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user",   content: userPrompt }
+        ]
       })
     });
     if (!res.ok) {
