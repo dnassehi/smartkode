@@ -33,11 +33,12 @@ const MODEL = 'gpt-4o-mini';
  * @returns {Promise<string>} – forenklet token (f.eks. "diabetes")
  */
 async function simplifyKeyword(raw) {
-  const prompt = `Du er en hjelpefunksjon som tar et sammensatt søkeord fra en klinisk notat-assistent og returnerer ett enkelt søketoken.  
+  const prompt = `Du er en hjelpefunksjon som tar et sammensatt søkeord fra en klinisk notat-assistent og returnerer ett enkelt søketoken. Tenk som en fastlege ville ha gjort og redusert uttryk til begreper som kan tilsvare en ICPC-2 kode-term 
 Eksempel:  
 - "diabetisk kontroll" → "diabetes"  
-- "HbA1c 54" → "hba1c"  
-- "blodtrykk 168/95" → "blodtrykk"  
+- "HbA1c 54" → "diabetes"  
+- "blodtrykk 168/95" → "hypertensjon"  
+- "mye snue og hoste" → "luftveisinfeksjon"  
 Returner bare selve token, uten andre ord eller tegn.  
 Søkeord: "${raw}"  
 Token:`;
