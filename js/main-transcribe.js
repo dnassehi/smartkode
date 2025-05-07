@@ -142,7 +142,8 @@ function buildPsoapPrompt(transcriptText) {
 1. Generer et journalnotat strukturert etter P-SOAP (Presentasjon, Subjektivt, Objektivt, Analyse, Plan).
 2. Inkluder kun informasjon som er eksakt nevnt i transkripsjonen.
 3. Ikke tilføye, anta eller gjette noe som ikke står i transkripsjonen.
-4. Forbedre grammatikk, stavemåte og flyt uten å endre innhold.
+4. Forbedre grammatikk, stavemåte og flyt uten å endre innhold og bruk medisinsk terminologi særlig til å beskrive "Objektivt", "Analyse" og "Plan".
+5. Bruk en punktformet liste under "Plan" når det passer seg.
 5. Hvis et P-SOAP-felt ikke er nevnt, sett det til en tom streng.
 6. Returner **kun** et gyldig JSON-objekt med disse feltene (uten ekstra tekst):
 {
