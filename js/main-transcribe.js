@@ -375,8 +375,19 @@ function setupEventListeners() {
       alert("Ingen transkripsjon tilgjengelig for notatgenerering.");
       return;
     }
-    // Bygg brukerprompt basert på valgt mal (P-SOAP) og transkribert tekst
-    const prompt = buildPsoapPrompt(transcriptText);
+    // Bygg system- og brukerprompt for P-SOAP med streng JSON-utgang
+    const systemPrompt = `
+  Du er en fastlege som skal skrive journalnotater i forbindelse med pasientkonsultasjoner. Generer kun gyldig JSON:
+  {
+    "Presentasjon":"<tekst>",
+    "Subjektivt":"<tekst>",
+    "Objektivt":"<tekst>",
+    "Analyse":"<tekst>",
+    "Plan":"<tekst>"
+  }
+  Ingen ekstra tekst.
+    `.trim();
+    const userPrompt = transcriptText;
     noteOutput.value = "...";
     adjustNoteHeight();
     generateNoteBtn.disabled = true;
@@ -387,17 +398,20 @@ function setupEventListeners() {
       noteTimerEl.textContent = `Notatgenereringstid: ${noteSeconds} sek`;
     }, 1000);
 
-    // Kall OpenAI API (Chat Completion) for å generere notat
+    // Kall OpenAI API for å generere notat med system- og user-meldinger
     fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
+        body: JSON.stringify({
         model: "gpt-4o-mini",
+        temperature: 0,
+        // Fjern `response_format`: ikke støttet her
         messages: [
-          { role: "user", content: prompt }
+          { role: "system", content: systemPrompt },
+          { role: "user",   content: userPrompt }
         ]
       })
     })
